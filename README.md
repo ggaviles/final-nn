@@ -1,3 +1,6 @@
+![BuildStatus](https://github.com/bmi203-2023/hw6-hmm-viterbi/actions/workflows/main.yml/badge.svg?)
+[![Documentation Status](https://readthedocs.org/projects/hw6-hmm-viterbi/badge/?version=latest)](https://hw6-hmm-viterbi.readthedocs.io/en/latest/?badge=latest)
+
 # Final project: neural network
 
 ## Overview

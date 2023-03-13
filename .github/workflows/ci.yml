@@ -1,0 +1,41 @@
+# This is a basic workflow to help you get started with Actions
+
+name: final-nn
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - name: Install package
+        run: |
+          pip install .
+      - name: Install numpy
+        run: |
+          pip install numpy
+      - name: Install scikit-learn
+        run: |
+          pip install -U scikit-learn
+      - name: Install matplotlib
+        run: |
+          pip install matplotlib
+      - name: Install pandas
+        run: |
+          pip install pandas
+      - name: Test with pytest
+        run: |
+          python -m pytest -vv test/*py
