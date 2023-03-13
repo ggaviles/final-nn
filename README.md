@@ -1,4 +1,4 @@
-![BuildStatus](https://github.com/ggaviles/final-nn/actions/workflows/ci.yml/badge.svg?)
+[![BuildStatus](https://github.com/ggaviles/final-nn/actions/workflows/ci.yml/badge.svg)](https://github.com/ggaviles/final-nn/actions/workflows/ci.yml)
 # Final project: neural network
 
 ## Overview
