@@ -41,4 +41,9 @@ def one_hot_encode_seqs(seq_arr: List[str]) -> ArrayLike:
                 G -> [0, 0, 0, 1]
             Then, AGA -> [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0].
     """
-    pass
+    one_hot = np.zeros((seq_arr.size, seq_arr.max() + 1))
+
+    # For each row, go to the column specified by the label in Y and set it equal to 1
+    one_hot[np.arange(seq_arr.size), seq_arr] = 1
+    one_hot = one_hot.T
+    return one_hot
