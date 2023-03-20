@@ -158,13 +158,13 @@ class NeuralNetwork:
 
             # Make dictionary to store Z and A matrices from '_single_forward' pass
             for_dict = {}
-            for_dict['A_curr'] = A_curr
-            for_dict['Z_curr'] = Z_curr
+            for_dict['A_curr' + str(layer_idx)] = A_curr
+            for_dict['Z_curr' + str(layer_idx)] = Z_curr
 
             # Set A current to be the previous A matrix in anticipation of the next forward pass
             A_prev = A_curr
 
-        return
+        return A_curr, for_dict
 
     def _single_backprop(
         self,
@@ -200,11 +200,6 @@ class NeuralNetwork:
             db_curr: ArrayLike
                 Partial derivative of loss function with respect to current layer bias matrix.
         """
-        # idk what to do with dZ curr or dA curr
-
-        # Define dW_curr
-        dW_curr = np.zeros(W_curr.shape)
-        db_curr = np.zeros(b_curr.shape)
 
         # Going backwards
         dW_curr = 1/A_prev.shape[1] * dA_curr * A_prev.T
@@ -238,8 +233,6 @@ class NeuralNetwork:
             grad_dict: Dict[str, ArrayLike]
                 Dictionary containing the gradient information from this pass of backprop.
         """
-        one_hot_Y = one_hot_encode_seqs(y)
-
         # Initialize grad_dict
         grad_dict = {}
 
