@@ -117,7 +117,15 @@ class NeuralNetwork:
         Z_curr = W_curr.dot(A_prev) + b_curr
 
         # Update current activation matrix by applying a user-defined activation function to the Z_curr matrix
-        A_curr = globals()[activation](Z_curr)  # May have to put activation functions in global scope
+        #A_curr = globals()[activation](Z_curr)  # May have to put activation functions in global scope
+
+        if "relu" in activation:
+            A_curr = self._relu(Z_curr)
+        elif "sigmoid" in activation:
+            A_curr = self._sigmoid(Z_curr)
+        else:
+            raise Exception("Choose either ReLu or sigmoid as activation function.")
+
         return A_curr, Z_curr  # Return a tuple of the activation matrix and linear transformed matrix
 
     def forward(self, X: ArrayLike) -> Tuple[ArrayLike, Dict[str, ArrayLike]]:
@@ -134,24 +142,29 @@ class NeuralNetwork:
             cache: Dict[str, ArrayLike]:
                 Dictionary storing Z and A matrices from `_single_forward` for use in backprop.
         """
+        # Iterate through neural network
         for idx, layer in enumerate(self.arch):
+            # Set index of first layer to 1
             layer_idx = idx + 1
 
             # Extract corresponding values from param_dict
             W_curr = self._param_dict['W' + str(layer_idx)]
             b_curr = self._param_dict['b' + str(layer_idx)]
-            A_prev = layer['input_dim']
-            activation = layer['activation']
+            A_prev = X  # Define first activation layer to be equal to X
+            activation = layer['activation']  # Extract activation function string
 
             # Pass param_dict values to single forward pass method
             A_curr, Z_curr = self._single_forward(W_curr, b_curr, A_prev, activation)
 
+            # Make dictionary to store Z and A matrices from '_single_forward' pass
+            for_dict = {}
+            for_dict['A_curr'] = A_curr
+            for_dict['Z_curr'] = Z_curr
+
             # Set A current to be the previous A matrix in anticipation of the next forward pass
             A_prev = A_curr
 
-        # How should I include X in this?
-
-
+        return
 
     def _single_backprop(
         self,
@@ -193,10 +206,20 @@ class NeuralNetwork:
         dW_curr = np.zeros(W_curr.shape)
         db_curr = np.zeros(b_curr.shape)
 
-        dW_curr = 1/m * dA_curr
-        db_curr = 1/m * np.sum()
+        # Going backwards
+        dW_curr = 1/A_prev.shape[1] * dA_curr * A_prev.T
+        db_curr = 1/A_prev.shape[1] * np.sum(dA_curr, axis=1) # Sum over the rows of dA
 
-        dZ1 =
+        # Apply user-defined activation function to
+        if "relu" in activation_curr:
+            dA_prev = np.dot(W_curr.T, dA_curr) * self._relu_backprop(A_prev, Z_curr)
+        elif "sigmoid" in activation_curr:
+            dA_prev = np.dot(W_curr.T, dA_curr) * self._sigmoid_backprop(A_prev, Z_curr)
+        else:
+            raise Exception("Choose either ReLu or sigmoid as activation function.")
+
+        return dA_prev, dW_curr, db_curr
+
 
     def backprop(self, y: ArrayLike, y_hat: ArrayLike, cache: Dict[str, ArrayLike]):
         """
@@ -215,12 +238,13 @@ class NeuralNetwork:
             grad_dict: Dict[str, ArrayLike]
                 Dictionary containing the gradient information from this pass of backprop.
         """
-        m =
         one_hot_Y = one_hot_encode_seqs(y)
 
-        # Define parameters
-        W_curr = self._param_dict['W' + ]
-        self._single_backprop()
+        # Initialize grad_dict
+        grad_dict = {}
+
+        #
+
 
 
     def _update_params(self, grad_dict: Dict[str, ArrayLike]):
@@ -295,7 +319,7 @@ class NeuralNetwork:
             nl_transform: ArrayLike
                 Activation function output.
         """
-        nl_transform = 1 / (1 + np.exp(-Z.dot(self.W)))
+        nl_transform = 1 / (1 + np.exp(-Z))
         nl_transform = np.rint(nl_transform)
         nl_transform = np.asarray(nl_transform, dtype='int')
         return nl_transform
@@ -314,7 +338,9 @@ class NeuralNetwork:
             dZ: ArrayLike
                 Partial derivative of current layer Z matrix.
         """
-        pass
+        dZ = dA * (1 - Z) * Z
+
+        return dZ
 
     def _relu(self, Z: ArrayLike) -> ArrayLike:
         """
@@ -344,7 +370,9 @@ class NeuralNetwork:
             dZ: ArrayLike
                 Partial derivative of current layer Z matrix.
         """
-        return Z > 0
+        # Derivative of ReLU and the chain rule
+        dZ = dA * (1. if Z > 0 else 0.)
+        return dZ
 
     def _binary_cross_entropy(self, y: ArrayLike, y_hat: ArrayLike) -> float:
         """
@@ -381,7 +409,14 @@ class NeuralNetwork:
             dA: ArrayLike
                 partial derivative of loss with respect to A matrix.
         """
-        pass
+        num = y_hat.shape[0]
+
+        # Clip data to avoid division by 0
+        clipped_y_hat_values = np.clip(y_hat, 1e-7, 1 - 1e-7)
+
+        # Calculate gradient
+        dA = -(y / clipped_y_hat_values -
+               (1 - y) / (1 - clipped_y_hat_values) / )
 
     def _mean_squared_error(self, y: ArrayLike, y_hat: ArrayLike) -> float:
         """
@@ -399,7 +434,7 @@ class NeuralNetwork:
         """
         d1 = y - y_hat
         mse = (1/int(len(y))*d1.dot(d1))
-        return mse
+        return np.mean(np.square(y - y_hat))
 
     def _mean_squared_error_backprop(self, y: ArrayLike, y_hat: ArrayLike) -> ArrayLike:
         """
@@ -415,4 +450,5 @@ class NeuralNetwork:
             dA: ArrayLike
                 partial derivative of loss with respect to A matrix.
         """
-        pass
+        # Derivative of the MSE loss function is 2/N * sum of i to N (y(i) - y_hat(i))
+        return 2 * np.mean(y - y_hat)
