@@ -107,6 +107,7 @@ class NeuralNetwork:
             Z_curr: ArrayLike
                 Current layer linear transformed matrix.
         """
+        #print('b_curr dim is: ', b_curr.shape)
         # Make a Z_curr matrix with the same dimensions as the multiplied matrices
         #print("W_curr shape is: ", W_curr.shape)
         #print("A_prev shape is: ", A_prev.shape)
@@ -159,7 +160,7 @@ class NeuralNetwork:
             activation = layer['activation']  # Extract activation function string
             # Pass param_dict values to single forward pass method
             A_curr, Z_curr = self._single_forward(W_curr, b_curr, A_prev, activation)
-
+            print('W_curr dim is: ', W_curr.shape)
             # Update cache values
             cache['A_curr' + str(layer_idx)] = A_curr
             cache['Z_curr' + str(layer_idx)] = Z_curr
@@ -170,7 +171,7 @@ class NeuralNetwork:
 
             # Set A current to be the previous A matrix in anticipation of the next forward pass
             A_prev = A_curr
-
+        print('A_curr is: ', A_curr)
         return A_curr, cache
 
     def _single_backprop(
@@ -221,7 +222,7 @@ class NeuralNetwork:
         elif "sigmoid" in activation_curr:
             dZ_curr = self._sigmoid_backprop(A_prev, Z_curr)
             # dA_prev = (W_curr).T . dZ_curr
-            dA_prev = np.dot(W_curr.T, dZ_curr)
+            dA_prev = np.dot(W_curr.T, dZ_curr.T)
 
             # dW_curr = 1/m * dZ_curr . (A_prev).T
             dW_curr = 1 / A_prev.shape[1] * np.dot(dZ_curr, A_prev.T)
@@ -368,11 +369,12 @@ class NeuralNetwork:
 
             # Create list to save the parameter update sizes for each batch
             #update_sizes = []
-            print("X_train dimension is ", X_train.shape)
-            print("y_train dimension is: ", y_train.shape)
+            #print("X_train dimension is ", X_train.shape)
+            #print("y_train dimension is: ", y_train.shape)
 
             # Iterate through batches (one of these loops is one epoch of training)
             for X_train, y_train in zip(X_batch, y_batch):
+                #print("X_train dataset: ", X_train)
                 # Make prediction and calculate loss
                 y_hat = self.predict(X_train)
                 if 'binary cross entropy' in self._loss_func:
@@ -424,14 +426,7 @@ class NeuralNetwork:
         """if X.shape[1] == self.num_feats:
             X = np.hstack([X, np.ones((X.shape[0], 1))])"""
         A_curr, cache = self.forward(X)
-        print("Cache in predict method: ", cache)
-        y_hat = []
-        """for idx, layer in reversed(list(enumerate(self.arch))):
-            # Set index of first layer to 1
-            layer_idx = idx + 1
-            Z_curr = cache['Z_curr' + str(layer_idx)]
-            y_hat.append(Z_curr)"""
-        print(y_hat)
+        y_hat = A_curr
         return y_hat
 
     def _sigmoid(self, Z: ArrayLike) -> ArrayLike:
@@ -465,7 +460,11 @@ class NeuralNetwork:
             dZ: ArrayLike
                 Partial derivative of current layer Z matrix.
         """
-        dZ = dA * (1 - Z) * Z
+        dZ = np.empty(len(dA))
+        for i in dA:
+            dZ_item = dA[i] * (1 - Z[i]) * Z[i]
+            np.append(dZ, dZ_item)
+        #dZ = dA * (1 - Z) * Z
 
         return dZ
 
@@ -498,7 +497,10 @@ class NeuralNetwork:
                 Partial derivative of current layer Z matrix.
         """
         # Derivative of ReLU and the chain rule
-        dZ = dA * (1. if Z > 0 else 0.)
+        dZ = np.empty(len(dA))
+        for i in dA:
+            dZ_item = dA[i] * (1. if Z[i] > 0 else 0.)
+            np.append(dZ, dZ_item)
         return dZ
 
     def _binary_cross_entropy(self, y: ArrayLike, y_hat: ArrayLike) -> float:
@@ -516,10 +518,12 @@ class NeuralNetwork:
                 Average loss over mini-batch.
         """
         y_hat = np.clip(y_hat, 1e-9, 1 - 1e-9)
-
+        print('y len: ', len(y))
+        print('y_hat len: ', len(y_hat))
+        print('y_hat: ', y_hat)
         # Calculate the separable parts of the loss function
-        y_zero_loss = y * np.log(y_hat)
-        y_one_loss = (1 - y) * np.log(1 - y_hat)
+        y_zero_loss = y[0] * np.log(y_hat)
+        y_one_loss = (1 - y[0]) * np.log(1 - y_hat)
         return -np.mean(y_zero_loss + y_one_loss)
 
     def _binary_cross_entropy_backprop(self, y: ArrayLike, y_hat: ArrayLike) -> ArrayLike:
@@ -539,12 +543,10 @@ class NeuralNetwork:
         num = y_hat.shape[0]
 
         # Clip data to avoid division by 0
-        clipped_y_hat_values = np.clip(y_hat, 1e-7, 1 - 1e-7)
+        y_hat = np.clip(y_hat, 1e-7, 1 - 1e-7)
 
         # Calculate gradient
-        # NEED TO CHANGE
-        dA = -(y / clipped_y_hat_values -
-               (1 - y) / (1 - clipped_y_hat_values))
+        dA = 1/len(y) * ((-y[0]/y_hat) + ((1-y[0])/(1-y_hat)))
 
     def _mean_squared_error(self, y: ArrayLike, y_hat: ArrayLike) -> float:
         """
@@ -560,8 +562,8 @@ class NeuralNetwork:
             loss: float
                 Average loss of mini-batch.
         """
-        print(y)
-        print(y_hat)
+        print('y is: ', y)
+        print('y shape is: ', y.shape)
         d1 = y - y_hat
         mse = (1/int(len(y))*d1.dot(d1))
         return np.mean(np.square(y - y_hat))
