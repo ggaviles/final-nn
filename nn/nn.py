@@ -200,16 +200,27 @@ class NeuralNetwork:
             db_curr: ArrayLike
                 Partial derivative of loss function with respect to current layer bias matrix.
         """
-
-        # Going backwards
-        dW_curr = 1/A_prev.shape[1] * dA_curr * A_prev.T
-        db_curr = 1/A_prev.shape[1] * np.sum(dA_curr, axis=1) # Sum over the rows of dA
-
-        # Apply user-defined activation function to
         if "relu" in activation_curr:
-            dA_prev = np.dot(W_curr.T, dA_curr) * self._relu_backprop(A_prev, Z_curr)
+            dZ_curr = self._relu_backprop(A_prev, Z_curr)
+            # dA_prev = (W_curr).T . dZ_curr
+            dA_prev = np.dot(W_curr.T, dZ_curr)
+
+            # dW_curr = 1/m * dZ_curr . (A_prev).T
+            dW_curr = 1/A_prev.shape[1] * np.dot(dZ_curr, A_prev.T)
+
+            # db_curr = 1/m * sum(dZ_curr)
+            db_curr = 1/A_prev.shape[1] * np.sum(dZ_curr, axis=1)
+
         elif "sigmoid" in activation_curr:
-            dA_prev = np.dot(W_curr.T, dA_curr) * self._sigmoid_backprop(A_prev, Z_curr)
+            dZ_curr = self._sigmoid_backprop(A_prev, Z_curr)
+            # dA_prev = (W_curr).T . dZ_curr
+            dA_prev = np.dot(W_curr.T, dZ_curr)
+
+            # dW_curr = 1/m * dZ_curr . (A_prev).T
+            dW_curr = 1 / A_prev.shape[1] * np.dot(dZ_curr, A_prev.T)
+
+            # db_curr = 1/m * sum(dZ_curr)
+            db_curr = 1 / A_prev.shape[1] * np.sum(dZ_curr, axis=1)
         else:
             raise Exception("Choose either ReLu or sigmoid as activation function.")
 
@@ -244,10 +255,11 @@ class NeuralNetwork:
             W_curr = self._param_dict['W' + str(layer_idx)]
             b_curr = self._param_dict['b' + str(layer_idx)]
             Z_curr = cache['Z_curr' + str(layer_idx)]
-            if layer_idx == 1:
-                A_prev
-            A_prev = X  # Define first activation layer to be equal to X
+            A_curr = cache['A_curr' + str(layer_idx)]
             activation = layer['activation']  # Extract activation function string
+
+            # Calculate dA_curr
+            dA_curr = np.dot(W_curr.T, dA_curr) * self._sigmoid_backprop(A_curr, Z_curr)
 
             # Pass param_dict values to single forward pass method
             dA_prev, dW_curr, db_curr = self._single_backprop(W_curr, b_curr, Z_curr, A_prev, dA_curr, activation)
@@ -327,8 +339,8 @@ class NeuralNetwork:
 
             # Create batches
             num_batches = int(X_train.shape[0] / self._batch_size) + 1
-            X_batch = np.array_split(X_train, num_batches)
-            y_batch = np.array_split(y_train, num_batches)
+            X_batch = np.array_split(X_train, self._batch_size)
+            y_batch = np.array_split(y_train, self._batch_size)
 
             # Create list to save the parameter update sizes for each batch
             update_sizes = []
@@ -346,6 +358,8 @@ class NeuralNetwork:
                 per_epoch_loss_train.append(train_loss)
 
                 # Update weights
+
+                """! Might be able to encapsulate all of this in backprop and update params"""
                 prev_W = self.W
                 if 'binary_cross_entropy' in self._loss_func:
                     grad = self._binary_cross_entropy_backprop(y_train, y_pred)
@@ -356,17 +370,22 @@ class NeuralNetwork:
                 new_W = prev_W - self.lr * grad
                 self.W = new_W
 
+                # Update weights
+                # Maybe use update params here
+
+
                 # Save parameter update size
                 update_sizes.append(np.abs(new_W - prev_W))
 
                 # Compute validation loss
                 if 'binary_cross_entropy' in self._loss_func:
-                    train_loss = self._binary_cross_entropy(y_train, y_pred)
+                    val_loss = self._binary_cross_entropy(y_val, self.predict(X_val))
                 elif 'mean_squared_error' in self._loss_func:
-                    train_loss = self._mean_squared_error(y_train, y_pred)
+                    val_loss = self._mean_squared_error(y_val, self.predict(X_val))
                 else:
                     raise Exception('Choose loss function binary_cross_entropy or mean_squared_error')
-                val_loss = self.loss_function(y_val, self.predict(X_val))
+
+                # Add validation loss to list
                 per_epoch_loss_val.append(val_loss)
 
             # Define step size as the average parameter update over the past epoch
@@ -390,7 +409,8 @@ class NeuralNetwork:
         """if X.shape[1] == self.num_feats:
             X = np.hstack([X, np.ones((X.shape[0], 1))])"""
         A_curr, cache = self.forward(X)
-        return A_curr
+        y_hat = A_curr
+        return y_hat
 
     def _sigmoid(self, Z: ArrayLike) -> ArrayLike:
         """
