@@ -209,9 +209,11 @@ class NeuralNetwork:
                 Partial derivative of loss function with respect to current layer bias matrix.
         """
         if "relu" in activation_curr:
-            dZ_curr = self._relu_backprop(A_prev, Z_curr)
+            print('dA_curr in relu: ', dA_curr)
+            dZ_curr = self._relu_backprop(dA_curr, Z_curr)
             # dA_prev = (W_curr).T . dZ_curr
-            dA_prev = np.dot(W_curr.T, dZ_curr)
+            A_curr = self._relu(Z_curr)
+            dA_prev = np.dot(W_curr.T, A_curr)
 
             # dW_curr = 1/m * dZ_curr . (A_prev).T
             dW_curr = 1/A_prev.shape[1] * np.dot(dZ_curr, A_prev.T)
@@ -220,9 +222,11 @@ class NeuralNetwork:
             db_curr = 1/A_prev.shape[1] * np.sum(dZ_curr, axis=1)
 
         elif "sigmoid" in activation_curr:
-            dZ_curr = self._sigmoid_backprop(A_prev, Z_curr)
+            print('dA_curr in sigmoid: ', dA_curr)
+            dZ_curr = self._sigmoid_backprop(dA_curr, Z_curr)
             # dA_prev = (W_curr).T . dZ_curr
-            dA_prev = np.dot(W_curr.T, dZ_curr.T)
+            A_curr = self._sigmoid(Z_curr)
+            dA_prev = np.dot(W_curr.T, A_curr)
 
             # dW_curr = 1/m * dZ_curr . (A_prev).T
             dW_curr = 1 / A_prev.shape[1] * np.dot(dZ_curr, A_prev.T)
@@ -274,8 +278,10 @@ class NeuralNetwork:
             # Calculate dA_curr
             if 'binary cross entropy' in self._loss_func:
                 dA_curr = self._binary_cross_entropy_backprop(y, y_hat)
+                print('dA_curr in BCE: ', dA_curr)
             elif 'mean squared error' in self._loss_func:
                 dA_curr = self._mean_squared_error_backprop(y, y_hat)
+                print('dA_curr in MSE: ', dA_curr)
             else:
                 raise Exception('Loss function must be binary cross entropy or mean squared error.')
 
@@ -461,7 +467,8 @@ class NeuralNetwork:
                 Partial derivative of current layer Z matrix.
         """
         dZ = np.empty(len(dA))
-        for i in dA:
+        dA = np.array(dA, dtype=int)
+        for i in range(len(dA) - 1):
             dZ_item = dA[i] * (1 - Z[i]) * Z[i]
             np.append(dZ, dZ_item)
         #dZ = dA * (1 - Z) * Z
@@ -547,6 +554,8 @@ class NeuralNetwork:
 
         # Calculate gradient
         dA = 1/len(y) * ((-y[0]/y_hat) + ((1-y[0])/(1-y_hat)))
+
+        return dA
 
     def _mean_squared_error(self, y: ArrayLike, y_hat: ArrayLike) -> float:
         """
