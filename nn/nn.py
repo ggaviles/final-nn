@@ -31,7 +31,7 @@ class NeuralNetwork:
 
     def __init__(
         self,
-        nn_arch: List[Dict[str, Union(int, str)]],
+        nn_arch: List[Dict[str, Union[int, str]]],
         lr: float,
         seed: int,
         batch_size: int,
@@ -255,11 +255,21 @@ class NeuralNetwork:
             W_curr = self._param_dict['W' + str(layer_idx)]
             b_curr = self._param_dict['b' + str(layer_idx)]
             Z_curr = cache['Z_curr' + str(layer_idx)]
-            A_curr = cache['A_curr' + str(layer_idx)]
+
+            if layer_idx == len(list(enumerate(self.arch))):
+                A_prev = cache['A_curr' + str(layer_idx)]
+            else:
+                A_prev = cache['A_curr' + str(layer_idx + 1)]
+
             activation = layer['activation']  # Extract activation function string
 
             # Calculate dA_curr
-            dA_curr = np.dot(W_curr.T, dA_curr) * self._sigmoid_backprop(A_curr, Z_curr)
+            if 'binary cross entropy' in self._loss_func:
+                dA_curr = self._binary_cross_entropy_backprop(y, y_hat)
+            elif 'mean squared error' in self._loss_func:
+                dA_curr = self._mean_squared_error_backprop(y, y_hat)
+            else:
+                raise Exception('Loss function must be binary cross entropy or mean squared error.')
 
             # Pass param_dict values to single forward pass method
             dA_prev, dW_curr, db_curr = self._single_backprop(W_curr, b_curr, Z_curr, A_prev, dA_curr, activation)
@@ -271,8 +281,6 @@ class NeuralNetwork:
             grad_dict['db_curr' + str(layer_idx)] = db_curr
 
         return grad_dict
-
-
 
     def _update_params(self, grad_dict: Dict[str, ArrayLike]):
         """
@@ -343,39 +351,26 @@ class NeuralNetwork:
             y_batch = np.array_split(y_train, self._batch_size)
 
             # Create list to save the parameter update sizes for each batch
-            update_sizes = []
+            #update_sizes = []
 
             # Iterate through batches (one of these loops is one epoch of training)
             for X_train, y_train in zip(X_batch, y_batch):
                 # Make prediction and calculate loss
-                y_pred = self.predict(X_train)
+                y_hat = self.predict(X_train)
                 if 'binary_cross_entropy' in self._loss_func:
-                    train_loss = self._binary_cross_entropy(y_train, y_pred)
+                    train_loss = self._binary_cross_entropy(y_train, y_hat)
                 elif 'mean_squared_error' in self._loss_func:
-                    train_loss = self._mean_squared_error(y_train, y_pred)
+                    train_loss = self._mean_squared_error(y_train, y_hat)
                 else:
                     raise Exception('Choose loss function binary_cross_entropy or mean_squared_error')
                 per_epoch_loss_train.append(train_loss)
 
-                # Update weights
-
-                """! Might be able to encapsulate all of this in backprop and update params"""
-                prev_W = self.W
-                if 'binary_cross_entropy' in self._loss_func:
-                    grad = self._binary_cross_entropy_backprop(y_train, y_pred)
-                elif 'mean_squared_error' in self._loss_func:
-                    grad = self._mean_squared_error_backprop(y_train, y_pred)
-                else:
-                    raise Exception('Choose loss function binary_cross_entropy or mean_squared_error')
-                new_W = prev_W - self.lr * grad
-                self.W = new_W
-
-                # Update weights
-                # Maybe use update params here
-
+                _, cache = self.forward(X_train)
+                grad_dict = self.backprop(y_train, y_hat, cache)
+                self._update_params(grad_dict)
 
                 # Save parameter update size
-                update_sizes.append(np.abs(new_W - prev_W))
+                #update_sizes.append(np.abs(new_W - prev_W))
 
                 # Compute validation loss
                 if 'binary_cross_entropy' in self._loss_func:
@@ -389,10 +384,12 @@ class NeuralNetwork:
                 per_epoch_loss_val.append(val_loss)
 
             # Define step size as the average parameter update over the past epoch
-            prev_update_size = np.mean(np.array(update_sizes))
+            #prev_update_size = np.mean(np.array(update_sizes))
 
             # Update iteration
             epoch_num += 1
+
+        return per_epoch_loss_train, per_epoch_loss_val
 
     def predict(self, X: ArrayLike) -> ArrayLike:
         """
@@ -520,8 +517,9 @@ class NeuralNetwork:
         clipped_y_hat_values = np.clip(y_hat, 1e-7, 1 - 1e-7)
 
         # Calculate gradient
+        # NEED TO CHANGE
         dA = -(y / clipped_y_hat_values -
-               (1 - y) / (1 - clipped_y_hat_values) / )
+               (1 - y) / (1 - clipped_y_hat_values))
 
     def _mean_squared_error(self, y: ArrayLike, y_hat: ArrayLike) -> float:
         """
