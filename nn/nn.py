@@ -108,13 +108,15 @@ class NeuralNetwork:
                 Current layer linear transformed matrix.
         """
         # Make a Z_curr matrix with the same dimensions as the multiplied matrices
-        Z_curr = np.zeros(W_curr.dot(A_prev).shape)
+        #print("W_curr shape is: ", W_curr.shape)
+        #print("A_prev shape is: ", A_prev.shape)
+        Z_curr = np.zeros(A_prev.dot(W_curr.T).shape)
 
         # Make a A_curr activation matrix with the same dimensions as the linear transformed matrix Z_curr
         A_curr = np.zeros(Z_curr.shape)
 
         # Set Z_curr to be weights matrix * activation matrix + biases
-        Z_curr = W_curr.dot(A_prev) + b_curr
+        Z_curr = (A_prev.dot(W_curr.T)) + b_curr.T
 
         # Update current activation matrix by applying a user-defined activation function to the Z_curr matrix
         #A_curr = globals()[activation](Z_curr)  # May have to put activation functions in global scope
@@ -142,6 +144,10 @@ class NeuralNetwork:
             cache: Dict[str, ArrayLike]:
                 Dictionary storing Z and A matrices from `_single_forward` for use in backprop.
         """
+        A_prev = X
+        # Make dictionary to store Z and A matrices from '_single_forward' pass
+        cache = dict()
+
         # Iterate through neural network
         for idx, layer in enumerate(self.arch):
             # Set index of first layer to 1
@@ -150,16 +156,17 @@ class NeuralNetwork:
             # Extract corresponding values from param_dict
             W_curr = self._param_dict['W' + str(layer_idx)]
             b_curr = self._param_dict['b' + str(layer_idx)]
-            A_prev = X  # Define first activation layer to be equal to X
             activation = layer['activation']  # Extract activation function string
-
             # Pass param_dict values to single forward pass method
             A_curr, Z_curr = self._single_forward(W_curr, b_curr, A_prev, activation)
 
-            # Make dictionary to store Z and A matrices from '_single_forward' pass
-            cache = {}
+            # Update cache values
             cache['A_curr' + str(layer_idx)] = A_curr
             cache['Z_curr' + str(layer_idx)] = Z_curr
+
+            # Update param dict values
+            #self._param_dict['W' + str(layer_idx)] = W_curr
+            #self._param_dict['b' + str(layer_idx)] = b_curr
 
             # Set A current to be the previous A matrix in anticipation of the next forward pass
             A_prev = A_curr
@@ -330,10 +337,17 @@ class NeuralNetwork:
         per_epoch_loss_val = []
 
         # Padding data with vector of ones for bias term
-        X_train = np.hstack([X_train, np.ones((X_train.shape[0], 1))])
-        X_val = np.hstack([X_val, np.ones((X_val.shape[0], 1))])
+        #print("X_train dimension is: ", X_train.shape)
+        #X_train = np.vstack((X_train, np.ones(X_train.shape[1])))
+        #X_train = np.hstack([np.ones((X_train.shape[0], 1)), X_train])
+        #X_train2 = np.vstack([np.ones((1, X_train.shape[0])), X_train])
+        #print("X_train1 dimension is: ", X_train1.shape)
+        #print("X_train2 dimension is: ", X_train2.shape)
+        #print("X_train dimension is: ", X_train.shape)
+        #X_val = np.hstack([np.ones((X_val.shape[0], 1)), X_val])
+        #X_val = np.vstack((X_val, np.ones(X_val.shape[1])))
 
-        # Defining intitial values for while loop
+        # Defining initial values for while loop
         epoch_num = 1
 
         # Repeat until convergence or maximum iterations reached
@@ -345,24 +359,28 @@ class NeuralNetwork:
             X_train = shuffle_arr[:, :-1]
             y_train = shuffle_arr[:, -1].flatten()
 
+            #print("X_train dimension is: ", X_train.shape)
+            #print("y_train dimension is: ", y_train.shape)
             # Create batches
             num_batches = int(X_train.shape[0] / self._batch_size) + 1
-            X_batch = np.array_split(X_train, self._batch_size)
-            y_batch = np.array_split(y_train, self._batch_size)
+            X_batch = np.array_split(X_train, num_batches)
+            y_batch = np.array_split(y_train, num_batches)
 
             # Create list to save the parameter update sizes for each batch
             #update_sizes = []
+            print("X_train dimension is ", X_train.shape)
+            print("y_train dimension is: ", y_train.shape)
 
             # Iterate through batches (one of these loops is one epoch of training)
             for X_train, y_train in zip(X_batch, y_batch):
                 # Make prediction and calculate loss
                 y_hat = self.predict(X_train)
-                if 'binary_cross_entropy' in self._loss_func:
+                if 'binary cross entropy' in self._loss_func:
                     train_loss = self._binary_cross_entropy(y_train, y_hat)
-                elif 'mean_squared_error' in self._loss_func:
+                elif 'mean squared error' in self._loss_func:
                     train_loss = self._mean_squared_error(y_train, y_hat)
                 else:
-                    raise Exception('Choose loss function binary_cross_entropy or mean_squared_error')
+                    raise Exception('Choose loss function binary cross entropy or mean squared error')
                 per_epoch_loss_train.append(train_loss)
 
                 _, cache = self.forward(X_train)
@@ -406,7 +424,14 @@ class NeuralNetwork:
         """if X.shape[1] == self.num_feats:
             X = np.hstack([X, np.ones((X.shape[0], 1))])"""
         A_curr, cache = self.forward(X)
-        y_hat = A_curr
+        print("Cache in predict method: ", cache)
+        y_hat = []
+        """for idx, layer in reversed(list(enumerate(self.arch))):
+            # Set index of first layer to 1
+            layer_idx = idx + 1
+            Z_curr = cache['Z_curr' + str(layer_idx)]
+            y_hat.append(Z_curr)"""
+        print(y_hat)
         return y_hat
 
     def _sigmoid(self, Z: ArrayLike) -> ArrayLike:
@@ -535,6 +560,8 @@ class NeuralNetwork:
             loss: float
                 Average loss of mini-batch.
         """
+        print(y)
+        print(y_hat)
         d1 = y - y_hat
         mse = (1/int(len(y))*d1.dot(d1))
         return np.mean(np.square(y - y_hat))
