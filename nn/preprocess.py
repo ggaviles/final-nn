@@ -32,10 +32,8 @@ def sample_seqs(seqs: List[str], labels: List[bool]) -> Tuple[List[str], List[bo
         else:
             neg_seqs.append(seq)
 
-    # Calculate number of sequences in each class
-    num_pos_seqs = len(pos_seqs)
-    num_neg_seqs = len(neg_seqs)
-    num_samples = min(num_pos_seqs, num_neg_seqs)
+    # Pass the smaller number of samples into the variable num_samples
+    num_samples = min(len(pos_seqs), len(neg_seqs))
 
     # Randomly sample sequences with replacement
     pos_samples = choices(pos_seqs, k=num_samples)
@@ -43,12 +41,20 @@ def sample_seqs(seqs: List[str], labels: List[bool]) -> Tuple[List[str], List[bo
 
     # Combine the sampled sequences and their labels
     samples = list(pos_samples) + list(neg_samples)
-    sampled_labels = [1] * num_samples + [0] * num_samples
+    labels = [1] * num_samples + [0] * num_samples
 
     # Shuffle the sequences and labels
+    # np.random.permutation returns a shuffled copy, while np.random.shuffle shuffles the array in place
     indices = np.random.permutation(len(samples))
-    sampled_seqs = [samples[i] for i in indices]
-    sampled_labels = [sampled_labels[i] for i in indices]
+
+    # Initialize empty lists for sampled seqs and sampled labels
+    sampled_seqs = []
+    sampled_labels = []
+
+    # Iterate through the indices and add samples and sampled_labels to respective lists
+    for i in indices:
+        sampled_seqs.append(samples[i])
+        sampled_labels.append(labels[i])
 
     return sampled_seqs, sampled_labels
 
