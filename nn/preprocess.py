@@ -43,7 +43,7 @@ def sample_seqs(seqs: List[str], labels: List[bool]) -> Tuple[List[str], List[bo
 
     # Combine the sampled sequences and their labels
     samples = list(pos_samples) + list(neg_samples)
-    sampled_labels = [True] * num_samples + [False] * num_samples
+    sampled_labels = [1] * num_samples + [0] * num_samples
 
     # Shuffle the sequences and labels
     indices = np.random.permutation(len(samples))
