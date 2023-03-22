@@ -47,12 +47,10 @@ def sample_seqs(seqs: List[str], labels: List[bool]) -> Tuple[List[str], List[bo
 
     # Shuffle the sequences and labels
     indices = np.random.permutation(len(samples))
+    sampled_seqs = [samples[i] for i in indices]
+    sampled_labels = [sampled_labels[i] for i in indices]
 
-    for i in indices:
-        samples = samples[i]
-
-    for i in indices:
-        sampled_labels = sampled_labels[i]
+    return sampled_seqs, sampled_labels
 
 def one_hot_encode_seqs(seq_arr: List[str]) -> ArrayLike:
     """

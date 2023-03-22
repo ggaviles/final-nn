@@ -192,7 +192,7 @@ class NeuralNetwork:
         elif "sigmoid" in activation_curr:
             dZ_curr = self._sigmoid_backprop(dA_curr, Z_curr)
         else:
-            # If neither 'relu' or 'sigmoid' is mentioned in activation function name, raise ValueError
+            # If neither 'relu' nor 'sigmoid' is mentioned in activation function name, raise ValueError
             raise NameError("Activation function name is not defined. "
                             "Choose either ReLU or sigmoid as activation function.")
 
