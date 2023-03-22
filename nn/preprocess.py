@@ -84,9 +84,9 @@ def one_hot_encode_seqs(seq_arr: List[str]) -> ArrayLike:
         # Initialize an empty list to store the encoding of a sequence
         seq_encoding = []
         # Iterate over sequence nucleotides
-        for nucleotides in seqs:
+        for nts in seqs:
             # Add encoding of each nucleotide to the encoding list
-            seq_encoding += encoding_dict[nucleotides]
+            seq_encoding += encoding_dict[nts]
         # Append the encoding to the list of encodings
         encoding_list.append(seq_encoding)
 
